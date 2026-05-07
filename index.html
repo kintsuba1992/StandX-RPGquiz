@@ -54,6 +54,31 @@ body{background:#000;color:#e8dcc0;font-family:'Crimson Text',serif;overflow:hid
 #enemy-hp{background:linear-gradient(90deg,#c0392b,#e74c3c);width:100%;}
 .char-img{width:140px;height:140px;object-fit:contain;}
 .boss-img{width:140px;height:140px;object-fit:contain;display:none;}
+#midboss-img{width:210px;height:210px;}
+#finalboss-img{width:280px;height:280px;}
+
+/* ── RESPONSIVE: Portrait Mobile ── */
+@media screen and (orientation:portrait) and (max-width:600px){
+  #arena{
+    flex:0 0 34vh;
+    min-height:0;
+  }
+  .char-img{width:80px;height:80px;}
+  .boss-img{width:80px;height:80px;}
+  #midboss-img{width:120px;height:120px;}
+  #finalboss-img{width:160px;height:160px;}
+  .char-wrap{bottom:30px;}
+  #olive-wrap{left:16px;}
+  #enemy-wrap{right:16px;}
+  .hp-bar{width:80px;}
+  .char-name{font-size:9px;letter-spacing:1px;}
+  #olive-id-label{font-size:8px;max-width:80px;}
+  .heart{font-size:12px;}
+  #q-text{font-size:14px;min-height:36px;}
+  .cbtn{font-size:12px;padding:7px 8px;}
+  #q-panel{padding:10px 12px;}
+  #stage-title{font-size:10px;letter-spacing:1px;}
+}
 
 @keyframes floatP{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 @keyframes floatE{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-12px) rotate(2deg)}}
@@ -551,6 +576,12 @@ function swapEnemy(){
   } else {
     bgEl.style.backgroundImage="url('"+IMG.bgNormal+"')";
   }
+  // Adjust enemy-wrap bottom based on boss size
+  const ewrap=document.getElementById('enemy-wrap');
+  const isPortrait=window.matchMedia('(orientation:portrait) and (max-width:600px)').matches;
+  if(s.enemy==='finalboss') ewrap.style.bottom=isPortrait?'5px':'10px';
+  else if(s.enemy==='midboss') ewrap.style.bottom=isPortrait?'15px':'30px';
+  else ewrap.style.bottom=isPortrait?'30px':'55px';
   if(s.enemy==='ghost'){
     document.getElementById('enemy-img').style.display='block';
     nameEl.style.color='var(--teal)';
@@ -809,8 +840,21 @@ function startGame(){
 }
 
 // ── INIT ──
+if(new URLSearchParams(location.search).get('reset')==='true'){
+  localStorage.removeItem(STORAGE_KEY);
+  alert('Reset complete.');
+  history.replaceState(null,'',location.pathname);
+}
 buildDots();
 showOverlay('ov-start');
+
+// Re-adjust layout on orientation change
+window.addEventListener('orientationchange',()=>{
+  setTimeout(()=>{ if(STAGES[G.stage]) swapEnemy(); },300);
+});
+window.addEventListener('resize',()=>{
+  if(STAGES[G.stage]) swapEnemy();
+});
 </script>
 </body>
 </html>
