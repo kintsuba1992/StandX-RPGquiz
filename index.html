@@ -129,26 +129,27 @@ body{background:#000;color:#e8dcc0;font-family:'Crimson Text',serif;overflow:hid
 
 /* TREASURE CHEST */
 #chest-wrap{
-  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(0);
+  position:absolute;right:8px;bottom:55px;
+  transform:scale(0);
   opacity:0;z-index:45;
   display:flex;flex-direction:column;align-items:center;gap:8px;
 }
 #chest-wrap.appear{animation:chestAppear 1.2s ease-out forwards;}
 #chest-img{width:200px;height:200px;object-fit:contain;}
 @keyframes chestAppear{
-  0%  {opacity:0;transform:translate(-50%,-50%) scale(0.2);filter:brightness(4) saturate(0);}
+  0%  {opacity:0;transform:scale(0.2);filter:brightness(4) saturate(0);}
   30% {opacity:1;filter:brightness(3) saturate(1);}
-  60% {transform:translate(-50%,-50%) scale(1.1);filter:brightness(1.5);}
-  100%{opacity:1;transform:translate(-50%,-50%) scale(1);filter:brightness(1);}
+  60% {transform:scale(1.1);filter:brightness(1.5);}
+  100%{opacity:1;transform:scale(1);filter:brightness(1);}
 }
 #chest-glow{
-  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  position:absolute;right:8px;bottom:55px;
   width:280px;height:280px;border-radius:50%;
   background:radial-gradient(ellipse,rgba(240,192,60,0.55) 0%,transparent 70%);
   opacity:0;z-index:44;pointer-events:none;
 }
 #chest-glow.show{animation:glowPulse 2s ease-in-out infinite;}
-@keyframes glowPulse{0%,100%{opacity:.6;transform:translate(-50%,-50%) scale(1);}50%{opacity:1;transform:translate(-50%,-50%) scale(1.15);}}
+@keyframes glowPulse{0%,100%{opacity:.6;transform:scale(1);}50%{opacity:1;transform:scale(1.15);}}
 
 /* TALK WINDOW */
 #talk-wrap{
@@ -569,86 +570,85 @@ document.getElementById('title-img').src  = IMG_TITLE;
 const QUESTIONS = [
   {id:'q03',text:'Is inflation (new token issuance) the main source of DUSD rewards?',
    choices:['A. Yes','B. No'],correct:1,
-   fb:{ok:'Correct!\nThe main revenue sources are:\n· Funding Fees (from the short side of positions)\n· Trading fees\n· Staking rewards\nBecause yield depends on market activity, it varies with trading volume and market conditions.',
-       ng:'Incorrect.\nThe main sources are Funding Fees, trading fees, and staking rewards — not inflation. Yield is generated from market activity.'}},
+   fb:{ok:"Correct!\nThe main revenue sources are:\n· Funding Fees (from the short side of positions)\n· Trading fees\n· Staking rewards\nBecause yield depends on market activity, it varies with trading volume and market conditions.",
+       ng:"Incorrect.\nThe main sources are Funding Fees, trading fees, and staking rewards — not inflation. Yield is generated from market activity."}},
   {id:'q04',text:'Is DUSD operated with a market-neutral mechanism?',
    choices:['A. Yes','B. No'],correct:0,
-   fb:{ok:'Correct!\nDeposited assets are structured as "spot holding + equivalent short hedge." This design suppresses price movement risk while generating yield from Funding and staking. However, it is not completely risk-free.',
-       ng:'Incorrect.\nDUSD is market-neutral by design: spot holding + equivalent short. That said, it is not entirely risk-free.'}},
+   fb:{ok:'Correct! Deposited assets are structured as "spot holding + equivalent short hedge." This design suppresses price movement risk while generating yield from Funding and staking. However, it is not completely risk-free — Funding reversals and hedge costs can affect yield.',
+       ng:'Incorrect. DUSD is market-neutral by design: spot holding + equivalent short. That said, it is not entirely risk-free.'}},
   {id:'q05',text:'Does the method of obtaining DUSD affect how rewards are calculated?',
    choices:['A. Yes, it changes','B. Basically no change'],correct:1,
-   fb:{ok:"Correct!\nWhether you mint, buy on a DEX, or receive DUSD via transfer, the acquisition method does not matter. The basis for reward calculation is 'how much that address holds.'",
-       ng:'Incorrect.\nThe acquisition method does not affect rewards. Your current balance is what matters.'}},
+   fb:{ok:'Correct! Whether you mint, buy on a DEX, or receive DUSD via transfer, the acquisition method does not matter. The basis for reward calculation is "how much that address holds." Your current balance matters — not your history.',
+       ng:'Incorrect. The acquisition method does not affect rewards. Your current balance is what matters, regardless of how you obtained it.'}},
   {id:'q06',text:"If you give up DUSD before settlement, is there a chance you won't receive rewards?",
    choices:['A. Yes','B. No'],correct:0,
-   fb:{ok:"Correct!\nRewards are calculated in snapshot-like cycles. If you sell or transfer during a calculation period, you may miss that cycle's rewards.",
+   fb:{ok:"Correct!\nRewards are calculated in snapshot-like cycles at regular intervals. This makes the following important:\n· Holding during the calculation period\n· Holding at the time of settlement\nIf you sell or transfer during this period, you may miss that cycle's rewards.",
        ng:"Incorrect.\nRewards are calculated periodically. Selling or transferring during a calculation period may result in missing that cycle's rewards."}},
   {id:'q07',text:'Is DUSD redemption completed instantly?',
    choices:['A. Yes','B. No'],correct:1,
-   fb:{ok:'Correct!\nRedemption requires a set period (e.g. T+7).\n· Want fast access → market sale\n· Want the official rate → redemption',
-       ng:'Incorrect.\nRedemption takes a set period such as T+7. Use a market sale if you need immediate access.'}},
+   fb:{ok:"Correct!\nRedemption requires a set period (e.g. T+7). You need to choose based on your needs:\n· Want fast access → market sale\n· Want the official rate → redemption\nThere is a tradeoff between liquidity and time.",
+       ng:"Incorrect.\nRedemption takes a set period such as T+7. Use a market sale if you need immediate access."}},
   {id:'q08',text:'Is StandX a Perps DEX where DUSD can be used as collateral?',
    choices:['A. Yes','B. No'],correct:0,
-   fb:{ok:'Correct!\nDUSD can be used directly as collateral on StandX, combining yield-bearing assets and trading capital in one.',
-       ng:'Incorrect.\nDUSD can be used directly as collateral on StandX.'}},
+   fb:{ok:'Correct! DUSD can be used directly as collateral on StandX. While yield assets and trading capital are typically separate in other protocols, StandX integrates them — allowing you to trade without moving your funds.',
+       ng:'Incorrect. DUSD can be used directly as collateral on StandX, combining yield-bearing assets and trading capital in one.'}},
   {id:'q09',text:'Does opening a position stop DUSD yield?',
    choices:['A. Stops','B. Does not stop'],correct:1,
-   fb:{ok:'Correct!\nDUSD yield continues even when used as collateral. Additionally, Position Yield (conditional) may be added on top.',
-       ng:'Incorrect.\nDUSD yield continues even while used as collateral.'}},
+   fb:{ok:'Correct! DUSD yield continues even when used as collateral. On top of that, Position Yield (conditional) may be added. This is a structure where a single unit of capital works across multiple revenue layers simultaneously.',
+       ng:'Incorrect. DUSD yield continues even while used as collateral, and additional Position Yield may be earned on top.'}},
   {id:'q10',text:'Is Position Yield (SIP-2) granted to all positions?',
    choices:['A. Yes','B. No'],correct:1,
-   fb:{ok:'Correct!\nEligible positions must meet conditions such as:\n· Held for a minimum duration\n· Not in an excessive risk state\n· In an eligible market',
-       ng:'Incorrect.\nPosition Yield has specific conditions. Simply opening a position is not sufficient.'}},
+   fb:{ok:"Correct!\nEligible positions must meet conditions such as:\n· Held for a minimum duration\n· Not in an excessive risk state\n· In an eligible market\nSimply entering a position is not enough to qualify.",
+       ng:"Incorrect.\nPosition Yield has specific conditions including minimum holding time, valid risk state, and eligible market. Simply opening a position is not sufficient."}},
   {id:'q11',text:'Does SIP-2 reward traders who increase trade frequency?',
    choices:['A. Yes','B. No'],correct:1,
-   fb:{ok:"Correct!\nWhat is evaluated is 'positions held over time.' Short-term rotation does not qualify.",
-       ng:'Incorrect.\nSIP-2 evaluates time-based positions, not trading frequency.'}},
+   fb:{ok:"Correct! What is evaluated is \"positions held over time.\" Rather than short-term turnover, what matters is:\n· How long you remain in the market\n· How consistently you maintain your position\nThis design directly influences your trading style.",
+       ng:"Incorrect. SIP-2 evaluates time-based positions, not trading frequency. Short-term rotation does not qualify."}},
   {id:'q12',text:'Does SIP-2 change liquidation rules or margin specifications?',
    choices:['A. Changes','B. Does not change'],correct:1,
-   fb:{ok:'Correct!\nSIP-2 only adds a reward layer — core specifications such as Liquidation remain unchanged.',
-       ng:'Incorrect.\nSIP-2 does not change existing risk specifications. Only a reward layer is added.'}},
+   fb:{ok:'Correct! Core specifications such as Execution and Liquidation remain unchanged. SIP-2 only adds a reward layer — risk itself is not reduced. Normal trading risks are fully maintained.',
+       ng:'Incorrect. SIP-2 does not change existing risk specifications. Only a reward layer is added.'}},
   {id:'q13',text:'Can positions opened via Block Trade also qualify for Position Yield (SIP-2)?',
    choices:['A. Yes','B. No'],correct:0,
-   fb:{ok:"Correct!\nThe evaluation criterion is 'the state of the position,' not the entry route.",
-       ng:'Incorrect.\nThe entry method does not matter. What matters is whether the resulting position meets the conditions.'}},
+   fb:{ok:"Correct! The evaluation criterion is \"the state of the position,\" not the entry route. Whether via order book trading or Block Trade, the method does not matter. What matters is whether the resulting position meets the conditions — not how it was executed.",
+       ng:'Incorrect. The entry method does not matter. What matters is whether the resulting position meets the Position Yield conditions.'}},
   {id:'q14',text:'Is liquidation penalty the main source of funds for Position Yield (SIP-2)?',
    choices:['A. Included','B. Basically not included'],correct:1,
-   fb:{ok:'Correct!\nThe primary sources are normal trading activity such as Fees, not one-time events like liquidation penalties.',
-       ng:'Incorrect.\nPosition Yield is primarily funded by normal trading activity (fees, etc.).'}},
+   fb:{ok:'Correct! The primary sources are normal trading activity such as Fees. The design avoids relying on one-time or exceptional revenue events.',
+       ng:'Incorrect. Position Yield is primarily funded by normal trading activity (fees, etc.), not liquidation penalties.'}},
   {id:'q15',text:'Is SIP-3 a proposal to strengthen the link between DUSD and trading fees?',
    choices:['A. Yes','B. No'],correct:0,
-   fb:{ok:'Correct!\nBy routing a portion of Perps trading fees to the DUSD yield side:\n· More trading volume → higher yield\nNote: this is currently at the proposal stage.',
-       ng:'Incorrect.\nSIP-3 proposes routing a portion of trading fees to DUSD yield.'}},
+   fb:{ok:"Correct!\nBy routing a portion of Perps trading fees to the DUSD yield side, SIP-3 creates a stronger connection:\n· More trading volume → higher yield\nNote: this is currently at the proposal stage.",
+       ng:"Incorrect.\nSIP-3 proposes routing a portion of trading fees to DUSD yield, directly linking market activity and returns."}},
   {id:'q16',text:'Does SIP-3 intend to distribute to all DUSD holders?',
    choices:['A. Yes','B. No'],correct:0,
-   fb:{ok:'Correct!\nThe design intends for holders to receive benefits simply by holding DUSD. Even users who do not actively trade can participate.',
-       ng:'Incorrect.\nSIP-3 is designed for all DUSD holders. You do not need to trade to be eligible.'}},
+   fb:{ok:'Correct! The design intends for holders to receive benefits simply by holding DUSD. Even users who do not actively trade can participate indirectly.',
+       ng:'Incorrect. SIP-3 is designed for all DUSD holders. You do not need to trade to be eligible.'}},
   {id:'q17',text:'Can Maker Points be earned from unexecuted limit orders?',
    choices:['A. Yes','B. No'],correct:0,
-   fb:{ok:"Correct!\nWhat is evaluated is 'whether liquidity is being placed on the order book,' not execution.",
-       ng:'Incorrect.\nMaker Points evaluate liquidity provision, not execution.'}},
+   fb:{ok:'Correct! What is evaluated is not execution, but "whether liquidity is being placed on the order book." Orders that provide value to the market are recognized.',
+       ng:'Incorrect. Maker Points evaluate liquidity provision, not execution. Unexecuted orders still count as long as they provide liquidity.'}},
   {id:'q18',text:'Do Maker Points accrue the moment you place an order?',
    choices:['A. Yes','B. No'],correct:1,
-   fb:{ok:'Correct!\nOrders must remain on the book for a certain period. Distance from mid price and order size also affect evaluation.',
-       ng:'Incorrect.\nOrders must remain on the book for a period of time.'}},
+   fb:{ok:"Correct!\nOrders must remain on the book for a certain period. Additionally, the following factors also affect evaluation:\n· Distance from mid price\n· Order size\nGenuine liquidity provision is required.",
+       ng:"Incorrect.\nOrders must remain on the book for a period of time. Distance from mid price and order size also affect evaluation."}},
   {id:'q19',text:'Is StandX a project that relies on VC funding?',
    choices:['A. Yes','B. No'],correct:1,
-   fb:{ok:"Correct!\nStandX is VC-independent, prioritizing product design over short-term token incentives.",
-       ng:'Incorrect.\nStandX follows a VC-independent structure.'}},
+   fb:{ok:"Correct! StandX is described as VC-independent, with a design that avoids relying on short-term token incentives. This philosophy directly influences the protocol's design choices.",
+       ng:"Incorrect. StandX follows a VC-independent structure, prioritizing product design over short-term token incentives."}},
   {id:'q20',text:'Is the essence of StandX to provide high APY?',
    choices:['A. Yes','B. No'],correct:1,
-   fb:{ok:"Correct!\nStandX generates value through multiple actions:\n· Holding (DUSD)\n· Maintaining positions (SIP-2)\n· Providing liquidity (Maker)",
-       ng:"Incorrect.\nStandX is about how capital works across multiple layers, not just a single APY."}},
+   fb:{ok:"Correct! StandX generates value through multiple actions:\n· Holding (DUSD)\n· Maintaining positions (SIP-2)\n· Providing liquidity (Maker)\nRather than a single APY number, understanding \"how your capital is being deployed\" gives you the full picture.",
+       ng:'Incorrect. StandX is about how capital works across multiple layers — holding, positions, and liquidity provision — not just a single APY.'}},
   {id:'q21',text:"Why didn't my SL/TP trigger?",
-   choices:["A. Another limit order occupied your margin, preventing SL/TP execution.","B. SL/TP was canceled after you manually adjusted or partially closed your position."],correct:0,
-   fb:{ok:"Correct!\nAlways ensure you have enough margin and available quota after setting SL/TP. A competing limit order can consume your margin and prevent execution.",
-       ng:"Incorrect.\nThe more common cause is insufficient margin due to other limit orders. Always check your margin and quota after setting SL/TP."}},
+   choices:["A. You might have placed another limit order that occupied your margin, so the SL/TP couldn't be executed.","B. The SL/TP order might have been canceled after you manually adjusted or partially closed your position."],correct:0,
+   fb:{ok:"Correct! Always make sure you have enough margin and available quota after setting SL/TP. A competing limit order can consume your margin and prevent SL/TP execution.",
+       ng:"Incorrect. While manual adjustments can affect SL/TP, the more common cause is insufficient margin due to other limit orders. Always check your margin and quota after setting SL/TP."}},
   {id:'q22',text:'How many layers of yield can you earn on StandX?',
    choices:['A. 3','B. 4'],correct:0,
-   fb:{ok:"Correct!\nThere are 3 layers:\n① Basic yield from holding DUSD\n② Position Yield (SIP-2)\n③ SIP-3 yield from trading fee distribution",
-       ng:"Incorrect.\nStandX offers 3 layers: holding yield (DUSD), Position Yield (SIP-2), and fee-linked yield (SIP-3)."}},
+   fb:{ok:"Correct!\nThere are 3 layers: ① Basic yield from holding DUSD, ② Position Yield (SIP-2) — if you don't want directional exposure, you can hedge with 1x LONG + 1x SHORT across different accounts, ③ SIP-3 yield from trading fee distribution.",
+       ng:"Incorrect.\nStandX offers 3 layers of yield: holding yield (DUSD), Position Yield (SIP-2), and fee-linked yield (SIP-3)."}},
 ];
-
 const STAGES = [
   {type:'minion',  qs:[0,1],        name:'SPECTER I',      enemy:'ghost',    label:'STAGE 1 — THE HAUNTED HALL'},
   {type:'minion',  qs:[2,3],        name:'SPECTER II',     enemy:'ghost',    label:'STAGE 2 — CORRIDOR OF DOUBT'},
@@ -724,7 +724,10 @@ function swapEnemy(){
   ['enemy-img','midboss-img','finalboss-img'].forEach(id=>{
     const el=document.getElementById(id);
     if(!el)return;
-    el.style.display='none';el.classList.remove('dissolve-anim');el.style.opacity='';
+    el.style.display='none';
+    el.style.opacity='1';
+    el.style.transition='';
+    el.classList.remove('dissolve-anim');
   });
   const nameEl=document.getElementById('enemy-name');
   nameEl.textContent=s.name;
@@ -766,13 +769,22 @@ function enemyDefeatEffect(cb, allCorrect){
     playSound('defeat_particle');
     spawnParticles(el);
     el.classList.add('dissolve-anim');
-    setTimeout(()=>{el.classList.remove('dissolve-anim');el.style.opacity='';if(cb)cb();},900);
+    setTimeout(()=>{
+      el.classList.remove('dissolve-anim');
+      el.style.display='none';
+      if(cb)cb();
+    },900);
   } else {
     // HP remaining — fade out only
     playSound('defeat_fade');
     el.style.transition='opacity 1.2s ease';
     el.style.opacity='0';
-    setTimeout(()=>{el.style.transition='';el.style.opacity='';if(cb)cb();},1300);
+    setTimeout(()=>{
+      el.style.transition='';
+      el.style.opacity='';
+      el.style.display='none';
+      if(cb)cb();
+    },1300);
   }
 }
 
