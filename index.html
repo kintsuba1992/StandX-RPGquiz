@@ -786,7 +786,7 @@ document.getElementById('btn-start').onclick=async()=>{
   errEl.textContent='';
   btn.disabled=true;btn.textContent='CHECKING...';
   try{
-    const url=GAS_URL+'?action=checkDiscordId&secret='+encodeURIComponent(API_SECRET)+'&discordId='+encodeURIComponent(result.normalized);
+    const url=GAS_URL+'?action=checkAndRegister&secret='+encodeURIComponent(API_SECRET)+'&discordId='+encodeURIComponent(result.normalized);
     const res=await fetch(url);
     if(!res.ok) throw {code:'http_error',message:'HTTP '+res.status};
     const data=await res.json();
