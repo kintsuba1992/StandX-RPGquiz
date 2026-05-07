@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StandX Quest</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#f0c060;--gold-dark:#b8860b;--teal:#00c8c8;
+  --panel-bg:rgba(8,6,18,0.90);--border:rgba(240,192,96,0.35);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#000;color:#e8dcc0;font-family:'Crimson Text',serif;overflow:hidden;height:100vh;display:flex;flex-direction:column;}
+
+/* HEADER */
+#stage-header{
+  background:linear-gradient(180deg,rgba(0,0,0,0.96),rgba(8,4,18,0.82));
+  border-bottom:1px solid var(--border);padding:7px 18px;
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:10;
+}
+#stage-title{font-family:'Cinzel',serif;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:3px;text-shadow:0 0 10px rgba(240,192,96,0.5);}
+#progress-bar{display:flex;gap:4px;align-items:center;}
+#progress-label{font-family:'Cinzel',serif;font-size:10px;color:var(--gold-dark);letter-spacing:2px;margin-right:5px;}
+.q-dot{width:9px;height:9px;border-radius:50%;background:rgba(240,192,96,.12);border:1px solid rgba(240,192,96,.25);transition:all .3s;}
+.q-dot.done{background:var(--gold);border-color:var(--gold);box-shadow:0 0 5px var(--gold);}
+.q-dot.current{background:rgba(240,192,96,.45);border-color:var(--gold);animation:pdot 1s infinite;}
+.q-dot.boss{border-color:#c0392b;background:rgba(139,0,0,.15);}
+.q-dot.boss.done{background:#c0392b;border-color:#ff4444;box-shadow:0 0 5px #ff4444;}
+@keyframes pdot{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ARENA */
+#arena{flex:1;position:relative;overflow:hidden;}
+#bg-img{position:absolute;inset:0;background-size:cover;background-position:center bottom;transition:background-image .5s ease;}
+#bg-overlay{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 25%,rgba(0,0,0,.55) 100%);}
+
+/* CHARACTERS */
+.char-wrap{position:absolute;bottom:55px;display:flex;flex-direction:column;align-items:center;gap:6px;}
+#olive-wrap{left:50px;}
+#enemy-wrap{right:50px;}
+
+/* OLIVE STATUS */
+#olive-status{display:flex;flex-direction:column;align-items:center;gap:4px;}
+#olive-id-label{font-family:'Cinzel',serif;font-size:10px;font-weight:700;color:var(--gold);letter-spacing:1px;text-shadow:0 2px 6px rgba(0,0,0,.9);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#hearts-row{display:flex;gap:3px;}
+.heart{font-size:16px;transition:all .3s;filter:drop-shadow(0 0 3px rgba(220,50,50,.8));}
+.heart.lost{opacity:.2;filter:none;}
+
+.char-name{font-family:'Cinzel',serif;font-size:11px;font-weight:700;letter-spacing:2px;color:var(--gold);text-shadow:0 2px 8px rgba(0,0,0,.9);}
+#enemy-wrap .char-name{color:var(--teal);}
+.hp-bar{width:120px;height:7px;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.18);border-radius:4px;overflow:hidden;}
+.hp-fill{height:100%;border-radius:4px;transition:width .5s ease;}
+#olive-hp{background:linear-gradient(90deg,#27ae60,#2ecc40);width:100%;}
+#enemy-hp{background:linear-gradient(90deg,#c0392b,#e74c3c);width:100%;}
+.char-img{width:140px;height:140px;object-fit:contain;}
+.boss-img{width:140px;height:140px;object-fit:contain;display:none;}
+
+@keyframes floatP{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes floatE{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-12px) rotate(2deg)}}
+#olive-img.idle{animation:floatP 3s ease-in-out infinite;}
+#enemy-img{animation:floatE 2.5s ease-in-out infinite;}
+
+/* DISSOLVE */
+@keyframes dissolve{
+  0%{opacity:1;transform:scale(1);filter:none;}
+  30%{opacity:.8;transform:scale(1.05);filter:brightness(2) saturate(3);}
+  100%{opacity:0;transform:scale(0.2) translateY(-30px);filter:brightness(3);}
+}
+.dissolve-anim{animation:dissolve .8s ease-out forwards !important;}
+
+/* PARTICLES */
+.particle{position:absolute;border-radius:50%;pointer-events:none;animation:particle-fly .8s ease-out forwards;}
+@keyframes particle-fly{0%{opacity:1;transform:translate(0,0) scale(1);}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(0.2);}}
+
+/* HIT */
+@keyframes hitFlash{0%,100%{filter:brightness(1)}50%{filter:brightness(3.5) saturate(2)}}
+.hit-anim{animation:hitFlash .4s ease;}
+.dmg-pop{position:absolute;font-family:'Cinzel',serif;font-size:26px;font-weight:900;pointer-events:none;animation:popRise .9s ease-out forwards;}
+.dmg-pop.hit{color:#ff4444;text-shadow:0 0 10px #ff0000;}
+.dmg-pop.crit{color:var(--gold);text-shadow:0 0 16px var(--gold);font-size:34px;}
+@keyframes popRise{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-56px)}}
+
+#stage-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .1s;z-index:50;}
+#battle-msg{
+  position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);
+  font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:4px;
+  color:var(--gold);text-shadow:0 0 18px var(--gold);
+  background:rgba(0,0,0,.72);padding:10px 26px;border:1px solid var(--gold);
+  opacity:0;pointer-events:none;transition:opacity .3s;z-index:40;white-space:nowrap;
+}
+#battle-msg.show{opacity:1;}
+
+/* TREASURE CHEST */
+#chest-wrap{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(0);
+  opacity:0;z-index:45;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+#chest-wrap.appear{animation:chestAppear 1.2s ease-out forwards;}
+#chest-img{width:200px;height:200px;object-fit:contain;}
+@keyframes chestAppear{
+  0%  {opacity:0;transform:translate(-50%,-50%) scale(0.2);filter:brightness(4) saturate(0);}
+  30% {opacity:1;filter:brightness(3) saturate(1);}
+  60% {transform:translate(-50%,-50%) scale(1.1);filter:brightness(1.5);}
+  100%{opacity:1;transform:translate(-50%,-50%) scale(1);filter:brightness(1);}
+}
+#chest-glow{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:280px;height:280px;border-radius:50%;
+  background:radial-gradient(ellipse,rgba(240,192,60,0.55) 0%,transparent 70%);
+  opacity:0;z-index:44;pointer-events:none;
+}
+#chest-glow.show{animation:glowPulse 2s ease-in-out infinite;}
+@keyframes glowPulse{0%,100%{opacity:.6;transform:translate(-50%,-50%) scale(1);}50%{opacity:1;transform:translate(-50%,-50%) scale(1.15);}}
+
+/* TALK WINDOW */
+#talk-wrap{
+  position:absolute;left:50%;bottom:0;transform:translateX(-50%);
+  width:90%;max-width:600px;
+  background:rgba(6,4,16,0.95);
+  border:1px solid var(--gold);
+  border-radius:6px 6px 0 0;
+  padding:14px 18px 12px;
+  z-index:60;
+  display:none;
+}
+#talk-wrap.show{display:block;}
+#talk-text{
+  font-family:'Crimson Text',serif;
+  font-size:14px;
+  color:#e8dcc0;
+  line-height:1.6;
+  white-space:pre-wrap;
+  min-height:50px;
+}
+#talk-next{
+  display:block;
+  margin:10px 0 0 auto;
+  padding:7px 28px;
+  background:transparent;
+  border:1px solid var(--gold);
+  color:var(--gold);
+  font-family:'Cinzel',serif;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:2px;
+  cursor:pointer;
+  transition:all .15s;
+}
+#talk-next:hover{background:var(--gold);color:#000;}
+
+/* QUESTION PANEL */
+#q-panel{background:var(--panel-bg);border-top:1px solid var(--border);backdrop-filter:blur(8px);padding:14px 18px;flex-shrink:0;z-index:10;}
+#q-counter{font-family:'Cinzel',serif;font-size:10px;color:var(--gold-dark);letter-spacing:3px;margin-bottom:5px;}
+#q-text{font-size:16px;font-weight:600;color:#f0e8d0;margin-bottom:10px;line-height:1.4;min-height:42px;}
+#choices{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.cbtn{
+  background:rgba(18,12,36,.82);border:1px solid rgba(240,192,96,.22);
+  color:#cfc4a0;font-family:'Crimson Text',serif;font-size:14px;
+  padding:9px 13px;cursor:pointer;border-radius:3px;transition:all .15s;
+  text-align:left;line-height:1.3;
+}
+.cbtn:hover:not(:disabled){background:rgba(240,192,96,.14);border-color:var(--gold);color:var(--gold);transform:translateX(2px);}
+.cbtn.correct{background:rgba(46,204,64,.18);border-color:#2ecc40;color:#2ecc40;}
+.cbtn.wrong{background:rgba(231,76,60,.18);border-color:#e74c3c;color:#e74c3c;}
+.cbtn:disabled{cursor:default;}
+
+/* OVERLAYS */
+.overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.92);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:100;font-family:'Cinzel',serif;text-align:center;gap:14px;padding:24px;
+}
+.overlay.hidden{display:none;}
+.ov-title{font-size:34px;font-weight:900;letter-spacing:4px;text-shadow:0 0 28px currentColor;}
+.ov-sub{font-size:13px;color:#a09070;letter-spacing:2px;font-family:'Crimson Text',serif;}
+
+/* START INPUT */
+#start-input-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:4px;}
+#start-input-wrap label{font-family:'Cinzel',serif;font-size:11px;color:var(--gold-dark);letter-spacing:2px;}
+#discord-id-input{
+  background:rgba(20,14,40,.9);border:1px solid rgba(240,192,96,.4);
+  color:#f0e8d0;font-family:'Crimson Text',serif;font-size:16px;
+  padding:10px 16px;border-radius:3px;width:260px;text-align:center;outline:none;transition:border-color .2s;
+}
+#discord-id-input:focus{border-color:var(--gold);}
+#discord-id-input.error{border-color:#e74c3c;animation:shake .3s ease;}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+#input-error{font-family:'Crimson Text',serif;font-size:13px;color:#e74c3c;min-height:18px;}
+
+/* CLEAR OVERLAY LOTTERY */
+#lottery-box{
+  background:rgba(20,14,40,.95);
+  border:2px solid var(--gold);
+  border-radius:6px;
+  padding:20px 32px;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  margin-top:4px;
+}
+#lottery-number-display{
+  font-family:'Cinzel',serif;font-size:44px;font-weight:900;
+  color:var(--gold);letter-spacing:8px;
+  text-shadow:0 0 20px var(--gold),0 0 40px rgba(240,192,96,.5);
+}
+#lottery-id-display{font-family:'Cinzel',serif;font-size:12px;color:#a09070;letter-spacing:2px;}
+#lottery-status{font-family:'Crimson Text',serif;font-size:13px;color:#a09070;min-height:20px;}
+#lottery-guide{
+  font-family:'Crimson Text',serif;font-size:13px;color:#c8bc9a;
+  line-height:1.6;max-width:380px;text-align:center;margin-top:4px;
+}
+</style>
+</head>
+<body>
+
+<div id="stage-header">
+  <div id="stage-title">⚔ STAGE 1</div>
+  <div id="progress-bar"><span id="progress-label">Q</span></div>
+</div>
+
+<div id="arena">
+  <div id="bg-img"></div>
+  <div id="bg-overlay"></div>
+
+  <!-- Olive -->
+  <div class="char-wrap" id="olive-wrap">
+    <div id="olive-status">
+      <div id="olive-id-label">OLIVE</div>
+      <div id="hearts-row">
+        <span class="heart" id="h1">❤️</span>
+        <span class="heart" id="h2">❤️</span>
+        <span class="heart" id="h3">❤️</span>
+        <span class="heart" id="h4">❤️</span>
+        <span class="heart" id="h5">❤️</span>
+      </div>
+    </div>
+    <img id="olive-img" class="char-img idle" src="" alt="Olive">
+  </div>
+
+  <!-- Enemy -->
+  <div class="char-wrap" id="enemy-wrap">
+    <div class="char-name" id="enemy-name">SPECTER</div>
+    <div class="hp-bar"><div class="hp-fill" id="enemy-hp"></div></div>
+    <img id="enemy-img" class="char-img" src="" alt="Enemy">
+    <img id="midboss-img" class="boss-img" src="" alt="Mid Boss">
+    <img id="finalboss-img" class="boss-img" src="" alt="Final Boss">
+  </div>
+
+  <!-- Treasure chest -->
+  <div id="chest-glow"></div>
+  <div id="chest-wrap">
+    <img id="chest-img" src="" alt="Treasure">
+  </div>
+
+  <div id="battle-msg"></div>
+  <div id="stage-flash"></div>
+
+  <!-- Talk window -->
+  <div id="talk-wrap">
+    <div id="talk-text"></div>
+    <button id="talk-next">NEXT ▶</button>
+  </div>
+</div>
+
+<div id="q-panel">
+  <div id="q-counter">QUESTION 1 / 20</div>
+  <div id="q-text">Loading...</div>
+  <div id="choices"></div>
+</div>
+
+<!-- OVERLAYS -->
+<div class="overlay" id="ov-start">
+  <div class="ov-title" style="color:var(--gold)">⚔ STANDX QUEST</div>
+  <div class="ov-sub">TEST YOUR KNOWLEDGE IN BATTLE</div>
+  <div id="start-input-wrap">
+    <label for="discord-id-input">ENTER YOUR DISCORD ID</label>
+    <input type="text" id="discord-id-input" placeholder="e.g. username" maxlength="32">
+    <div id="input-error"></div>
+  </div>
+  <button class="ov-btn" id="btn-start">BEGIN QUEST</button>
+</div>
+
+<div class="overlay hidden" id="ov-gameover">
+  <div class="ov-title" style="color:#e74c3c">💀 DEFEATED</div>
+  <div class="ov-sub">Your quest ends here...</div>
+  <div id="go-score" style="font-size:18px;color:var(--gold);margin-top:6px"></div>
+  <button class="ov-btn" id="btn-retry">RETRY ?</button>
+</div>
+
+<div class="overlay hidden" id="ov-midboss">
+  <div class="ov-title" style="color:#ff9900">🔥 MID BOSS SLAIN!</div>
+  <div class="ov-sub">A life is restored — press onward, warrior</div>
+  <div style="font-size:30px;margin:4px">❤️ +1</div>
+  <button class="ov-btn" id="btn-continue">CONTINUE</button>
+</div>
+
+<div class="overlay hidden" id="ov-clear">
+  <div class="ov-title" style="color:var(--gold)">✨ QUEST COMPLETE!</div>
+  <div class="ov-sub">You have conquered the StandX Hall of Trials</div>
+  <div id="lottery-box">
+    <div id="lottery-id-display"></div>
+    <div id="lottery-number-display">------</div>
+    <div id="lottery-status">Issuing number...</div>
+  </div>
+  <div id="lottery-guide">
+    Take a screenshot and post it to the <strong>StandX Discord community</strong>.<br>
+    Make sure your Discord ID, score, and lottery number are all visible.<br>
+    <span style="font-size:12px;color:#a09070;">※ Everyone who completes the quest is eligible for the lottery.</span>
+  </div>
+  <div id="cl-score" style="font-size:14px;color:#a09070;margin-top:2px"></div>
+</div>
+
+<style>
+.ov-btn{
+  margin-top:6px;padding:11px 38px;background:transparent;border:2px solid var(--gold);
+  color:var(--gold);font-family:'Cinzel',serif;font-size:13px;font-weight:700;
+  letter-spacing:3px;cursor:pointer;transition:all .2s;
+}
+.ov-btn:hover{background:var(--gold);color:#000;}
+</style>
+
+<script>
+// ── CONFIG ──
+const GAS_URL    = 'https://script.google.com/macros/s/AKfycbwV9G-UOBp5RHCEKoAKqnxpKuL6BjYpUrU0DfoQuEUZwfcMIK9LE0M2g0zZ_GuKvHOY/exec';
+const _AS        = [89,94,75,68,78,82,7,91,95,67,80,117,24,26,24,28];
+const API_SECRET = 'StandX-RPGquiz'
+const STORAGE_KEY= 'standx_quiz_v1_rpg';
+const IS_PRODUCTION = true;
+
+// ── IMAGE URLs (GitHub) ──
+const BASE = 'https://raw.githubusercontent.com/kintsuba1992/StandX-RPGquiz/main/';
+const IMG = {
+  olive:     BASE+'stander_standing_rgba.png',
+  ghost:     BASE+'ghost_enemy_rgba.png',
+  damage:    BASE+'stander_damage_rgba.png',
+  knockdown: BASE+'stander_knockdown_rgba.png',
+  victory:   BASE+'stander_victory_rgba.png',
+  chest:     BASE+'treasure_chest_rgba_fixed.png',
+  darkknight:BASE+'darkknight_rgba.png',
+  demonking: BASE+'demon_king_rgba.png',
+  bgNormal:  BASE+'stage_normal.png',
+  bgLast:    BASE+'stage_last.png',
+};
+
+// Set initial images
+document.getElementById('bg-img').style.backgroundImage = "url('"+IMG.bgNormal+"')";
+document.getElementById('olive-img').src  = IMG.olive;
+document.getElementById('enemy-img').src  = IMG.ghost;
+document.getElementById('chest-img').src  = IMG.chest;
+
+// ── QUESTIONS (q03-q22, 20 questions) ──
+const QUESTIONS = [
+  {id:'q03',text:'Is inflation (new token issuance) the main source of DUSD rewards?',
+   choices:['A. Yes','B. No'],correct:1,
+   fb:{ok:'Correct!
+The main revenue sources are:
+· Funding Fees (from the short side of positions)
+· Trading fees
+· Staking rewards
+Because yield depends on market activity, it varies with trading volume and market conditions.',
+       ng:'Incorrect.
+The main sources are Funding Fees, trading fees, and staking rewards — not inflation. Yield is generated from market activity.'}},
+  {id:'q04',text:'Is DUSD operated with a market-neutral mechanism?',
+   choices:['A. Yes','B. No'],correct:0,
+   fb:{ok:'Correct!
+Deposited assets are structured as "spot holding + equivalent short hedge." This design suppresses price movement risk while generating yield from Funding and staking. However, it is not completely risk-free.',
+       ng:'Incorrect.
+DUSD is market-neutral by design: spot holding + equivalent short. That said, it is not entirely risk-free.'}},
+  {id:'q05',text:'Does the method of obtaining DUSD affect how rewards are calculated?',
+   choices:['A. Yes, it changes','B. Basically no change'],correct:1,
+   fb:{ok:"Correct!
+Whether you mint, buy on a DEX, or receive DUSD via transfer, the acquisition method does not matter. The basis for reward calculation is 'how much that address holds.'",
+       ng:'Incorrect.
+The acquisition method does not affect rewards. Your current balance is what matters.'}},
+  {id:'q06',text:"If you give up DUSD before settlement, is there a chance you won't receive rewards?",
+   choices:['A. Yes','B. No'],correct:0,
+   fb:{ok:"Correct!
+Rewards are calculated in snapshot-like cycles. If you sell or transfer during a calculation period, you may miss that cycle's rewards.",
+       ng:"Incorrect.
+Rewards are calculated periodically. Selling or transferring during a calculation period may result in missing that cycle's rewards."}},
+  {id:'q07',text:'Is DUSD redemption completed instantly?',
+   choices:['A. Yes','B. No'],correct:1,
+   fb:{ok:'Correct!
+Redemption requires a set period (e.g. T+7).
+· Want fast access → market sale
+· Want the official rate → redemption',
+       ng:'Incorrect.
+Redemption takes a set period such as T+7. Use a market sale if you need immediate access.'}},
+  {id:'q08',text:'Is StandX a Perps DEX where DUSD can be used as collateral?',
+   choices:['A. Yes','B. No'],correct:0,
+   fb:{ok:'Correct!
+DUSD can be used directly as collateral on StandX, combining yield-bearing assets and trading capital in one.',
+       ng:'Incorrect.
+DUSD can be used directly as collateral on StandX.'}},
+  {id:'q09',text:'Does opening a position stop DUSD yield?',
+   choices:['A. Stops','B. Does not stop'],correct:1,
+   fb:{ok:'Correct!
+DUSD yield continues even when used as collateral. Additionally, Position Yield (conditional) may be added on top.',
+       ng:'Incorrect.
+DUSD yield continues even while used as collateral.'}},
+  {id:'q10',text:'Is Position Yield (SIP-2) granted to all positions?',
+   choices:['A. Yes','B. No'],correct:1,
+   fb:{ok:'Correct!
+Eligible positions must meet conditions such as:
+· Held for a minimum duration
+· Not in an excessive risk state
+· In an eligible market',
+       ng:'Incorrect.
+Position Yield has specific conditions. Simply opening a position is not sufficient.'}},
+  {id:'q11',text:'Does SIP-2 reward traders who increase trade frequency?',
+   choices:['A. Yes','B. No'],correct:1,
+   fb:{ok:"Correct!
+What is evaluated is 'positions held over time.' Short-term rotation does not qualify.",
+       ng:'Incorrect.
+SIP-2 evaluates time-based positions, not trading frequency.'}},
+  {id:'q12',text:'Does SIP-2 change liquidation rules or margin specifications?',
+   choices:['A. Changes','B. Does not change'],correct:1,
+   fb:{ok:'Correct!
+SIP-2 only adds a reward layer — core specifications such as Liquidation remain unchanged.',
+       ng:'Incorrect.
+SIP-2 does not change existing risk specifications. Only a reward layer is added.'}},
+  {id:'q13',text:'Can positions opened via Block Trade also qualify for Position Yield (SIP-2)?',
+   choices:['A. Yes','B. No'],correct:0,
+   fb:{ok:"Correct!
+The evaluation criterion is 'the state of the position,' not the entry route.",
+       ng:'Incorrect.
+The entry method does not matter. What matters is whether the resulting position meets the conditions.'}},
+  {id:'q14',text:'Is liquidation penalty the main source of funds for Position Yield (SIP-2)?',
+   choices:['A. Included','B. Basically not included'],correct:1,
+   fb:{ok:'Correct!
+The primary sources are normal trading activity such as Fees, not one-time events like liquidation penalties.',
+       ng:'Incorrect.
+Position Yield is primarily funded by normal trading activity (fees, etc.).'}},
+  {id:'q15',text:'Is SIP-3 a proposal to strengthen the link between DUSD and trading fees?',
+   choices:['A. Yes','B. No'],correct:0,
+   fb:{ok:'Correct!
+By routing a portion of Perps trading fees to the DUSD yield side:
+· More trading volume → higher yield
+Note: this is currently at the proposal stage.',
+       ng:'Incorrect.
+SIP-3 proposes routing a portion of trading fees to DUSD yield.'}},
+  {id:'q16',text:'Does SIP-3 intend to distribute to all DUSD holders?',
+   choices:['A. Yes','B. No'],correct:0,
+   fb:{ok:'Correct!
+The design intends for holders to receive benefits simply by holding DUSD. Even users who do not actively trade can participate.',
+       ng:'Incorrect.
+SIP-3 is designed for all DUSD holders. You do not need to trade to be eligible.'}},
+  {id:'q17',text:'Can Maker Points be earned from unexecuted limit orders?',
+   choices:['A. Yes','B. No'],correct:0,
+   fb:{ok:"Correct!
+What is evaluated is 'whether liquidity is being placed on the order book,' not execution.",
+       ng:'Incorrect.
+Maker Points evaluate liquidity provision, not execution.'}},
+  {id:'q18',text:'Do Maker Points accrue the moment you place an order?',
+   choices:['A. Yes','B. No'],correct:1,
+   fb:{ok:'Correct!
+Orders must remain on the book for a certain period. Distance from mid price and order size also affect evaluation.',
+       ng:'Incorrect.
+Orders must remain on the book for a period of time.'}},
+  {id:'q19',text:'Is StandX a project that relies on VC funding?',
+   choices:['A. Yes','B. No'],correct:1,
+   fb:{ok:"Correct!
+StandX is VC-independent, prioritizing product design over short-term token incentives.",
+       ng:'Incorrect.
+StandX follows a VC-independent structure.'}},
+  {id:'q20',text:'Is the essence of StandX to provide high APY?',
+   choices:['A. Yes','B. No'],correct:1,
+   fb:{ok:"Correct!
+StandX generates value through multiple actions:
+· Holding (DUSD)
+· Maintaining positions (SIP-2)
+· Providing liquidity (Maker)",
+       ng:"Incorrect.
+StandX is about how capital works across multiple layers, not just a single APY."}},
+  {id:'q21',text:"Why didn't my SL/TP trigger?",
+   choices:["A. Another limit order occupied your margin, preventing SL/TP execution.","B. SL/TP was canceled after you manually adjusted or partially closed your position."],correct:0,
+   fb:{ok:"Correct!
+Always ensure you have enough margin and available quota after setting SL/TP. A competing limit order can consume your margin and prevent execution.",
+       ng:"Incorrect.
+The more common cause is insufficient margin due to other limit orders. Always check your margin and quota after setting SL/TP."}},
+  {id:'q22',text:'How many layers of yield can you earn on StandX?',
+   choices:['A. 3','B. 4'],correct:0,
+   fb:{ok:"Correct!
+There are 3 layers:
+① Basic yield from holding DUSD
+② Position Yield (SIP-2)
+③ SIP-3 yield from trading fee distribution",
+       ng:"Incorrect.
+StandX offers 3 layers: holding yield (DUSD), Position Yield (SIP-2), and fee-linked yield (SIP-3)."}},
+];
+
+const STAGES = [
+  {type:'minion',  qs:[0,1],        name:'SPECTER I',      enemy:'ghost',    label:'STAGE 1 — THE HAUNTED HALL'},
+  {type:'minion',  qs:[2,3],        name:'SPECTER II',     enemy:'ghost',    label:'STAGE 2 — CORRIDOR OF DOUBT'},
+  {type:'minion',  qs:[4,5],        name:'SPECTER III',    enemy:'ghost',    label:'STAGE 3 — THE COLLATERAL CRYPT'},
+  {type:'minion',  qs:[6,7],        name:'SPECTER IV',     enemy:'ghost',    label:'STAGE 4 — VAULT OF RLUSD'},
+  {type:'minion',  qs:[8,9],        name:'SPECTER V',      enemy:'ghost',    label:'STAGE 5 — THE TVL TOWER'},
+  {type:'minion',  qs:[10,11],      name:'SPECTER VI',     enemy:'ghost',    label:'STAGE 6 — TRIPLE YIELD GATE'},
+  {type:'midboss', qs:[12,13,14],   name:'DARK KNIGHT',    enemy:'midboss',  label:'⚠ MID BOSS — DARK KNIGHT'},
+  {type:'finalboss',qs:[15,16,17,18,19],name:'DEMON KING', enemy:'finalboss',label:'☠ FINAL BOSS — DEMON KING'},
+];
+
+// ── STATE ──
+let G = {lives:5,stage:0,qi:0,score:0,discordId:'',waitingNext:false};
+
+const stg = ()=>STAGES[G.stage];
+const qObj= ()=>QUESTIONS[stg().qs[G.qi]];
+function globalQNum(){let n=0;for(let i=0;i<G.stage;i++)n+=STAGES[i].qs.length;return n+G.qi+1;}
+
+// ── OLIVE IMAGE ──
+function setOliveImg(type){
+  const el=document.getElementById('olive-img');
+  el.classList.remove('idle');
+  const map={idle:IMG.olive,damage:IMG.damage,knockdown:IMG.knockdown,victory:IMG.victory};
+  el.src=map[type]||IMG.olive;
+  if(type==='idle') el.classList.add('idle');
+}
+
+// ── HEARTS ──
+function refreshLives(){for(let i=1;i<=5;i++) document.getElementById('h'+i).classList.toggle('lost',i>G.lives);}
+
+// ── PROGRESS DOTS ──
+function buildDots(){
+  const bar=document.getElementById('progress-bar');
+  bar.querySelectorAll('.q-dot').forEach(d=>d.remove());
+  let g=0;
+  STAGES.forEach(s=>s.qs.forEach(()=>{
+    const d=document.createElement('div');
+    d.className='q-dot'+(s.type!=='minion'?' boss':'');
+    d.id='dot'+g++;bar.appendChild(d);
+  }));
+}
+function refreshDots(){
+  let g=0;
+  STAGES.forEach((s,si)=>s.qs.forEach((_,qi)=>{
+    const d=document.getElementById('dot'+g++);if(!d)return;
+    d.classList.remove('done','current');
+    if(si<G.stage||(si===G.stage&&qi<G.qi)) d.classList.add('done');
+    else if(si===G.stage&&qi===G.qi) d.classList.add('current');
+  }));
+}
+
+// ── PARTICLES ──
+function spawnParticles(targetEl){
+  const arena=document.getElementById('arena');
+  const rect=targetEl.getBoundingClientRect();
+  const ar=arena.getBoundingClientRect();
+  const cx=rect.left-ar.left+rect.width/2;
+  const cy=rect.top-ar.top+rect.height/2;
+  const colors=['#00e5ff','#ff6600','#ffdd00','#ff4444','#ffffff','#aaffaa'];
+  for(let i=0;i<28;i++){
+    const p=document.createElement('div');p.className='particle';
+    const angle=Math.random()*Math.PI*2;
+    const dist=60+Math.random()*80;
+    const size=4+Math.random()*7;
+    p.style.cssText='left:'+cx+'px;top:'+cy+'px;width:'+size+'px;height:'+size+'px;background:'+colors[Math.floor(Math.random()*colors.length)]+';--dx:'+(Math.cos(angle)*dist)+'px;--dy:'+(Math.sin(angle)*dist)+'px;animation-duration:'+(0.5+Math.random()*0.5)+'s;animation-delay:'+(Math.random()*0.1)+'s;';
+    arena.appendChild(p);setTimeout(()=>p.remove(),900);
+  }
+}
+
+// ── ENEMY SWAP ──
+function swapEnemy(){
+  const s=stg();
+  ['enemy-img','midboss-img','finalboss-img'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.style.display='none';el.classList.remove('dissolve-anim');el.style.opacity='';
+  });
+  const nameEl=document.getElementById('enemy-name');
+  nameEl.textContent=s.name;
+  document.getElementById('stage-title').textContent='⚔ '+s.label;
+  // Background switching
+  const bgEl=document.getElementById('bg-img');
+  if(s.enemy==='finalboss'){
+    bgEl.style.backgroundImage="url('"+IMG.bgLast+"')";
+  } else {
+    bgEl.style.backgroundImage="url('"+IMG.bgNormal+"')";
+  }
+  if(s.enemy==='ghost'){
+    document.getElementById('enemy-img').style.display='block';
+    nameEl.style.color='var(--teal)';
+  } else if(s.enemy==='midboss'){
+    const el=document.getElementById('midboss-img');
+    el.src=IMG.darkknight;el.style.display='block';
+    nameEl.style.color='#ff9900';
+  } else {
+    const el=document.getElementById('finalboss-img');
+    el.src=IMG.demonking;el.style.display='block';
+    nameEl.style.color='#ff0044';
+  }
+  document.getElementById('enemy-hp').style.width='100%';
+}
+
+// ── ENEMY DEFEAT ──
+function enemyDefeatEffect(cb){
+  const s=stg();
+  const el=s.enemy==='ghost'?document.getElementById('enemy-img'):s.enemy==='midboss'?document.getElementById('midboss-img'):document.getElementById('finalboss-img');
+  spawnParticles(el);el.classList.add('dissolve-anim');
+  setTimeout(()=>{el.classList.remove('dissolve-anim');el.style.opacity='';if(cb)cb();},900);
+}
+
+// ── TALK WINDOW ──
+function showTalk(text,onNext){
+  const wrap=document.getElementById('talk-wrap');
+  document.getElementById('talk-text').textContent=text;
+  wrap.classList.add('show');
+  G.waitingNext=true;
+  const btn=document.getElementById('talk-next');
+  btn.onclick=()=>{wrap.classList.remove('show');G.waitingNext=false;if(onNext)onNext();};
+}
+
+// ── RENDER Q ──
+function renderQ(){
+  refreshDots();
+  const q=qObj();
+  document.getElementById('q-counter').textContent='QUESTION '+globalQNum()+' / 20';
+  document.getElementById('q-text').textContent=q.text;
+  const grid=document.getElementById('choices');grid.innerHTML='';
+  q.choices.forEach((c,i)=>{
+    const b=document.createElement('button');b.className='cbtn';b.textContent=c;
+    b.onclick=()=>pick(i,q.correct,q.fb);grid.appendChild(b);
+  });
+}
+
+// ── PICK ──
+function pick(chosen,correct,fb){
+  document.querySelectorAll('.cbtn').forEach(b=>b.disabled=true);
+  document.querySelectorAll('.cbtn')[correct].classList.add('correct');
+  const isCorrect=(chosen===correct);
+  if(!isCorrect){
+    document.querySelectorAll('.cbtn')[chosen].classList.add('wrong');
+    G.lives--;refreshLives();
+    setOliveImg('damage');
+    setTimeout(()=>setOliveImg('idle'),2000);
+  } else {
+    G.score++;
+    // enemy HP drain
+    const s=stg();const qInStage=G.qi+1;
+    document.getElementById('enemy-hp').style.width=(100-(qInStage/s.qs.length)*100)+'%';
+    const eEl=s.enemy==='ghost'?document.getElementById('enemy-img'):s.enemy==='midboss'?document.getElementById('midboss-img'):document.getElementById('finalboss-img');
+    eEl.classList.add('hit-anim');setTimeout(()=>eEl.classList.remove('hit-anim'),450);
+  }
+
+  popLabel(isCorrect?'HIT!':'MISS!',isCorrect?'crit':'hit',isCorrect?'55%':'12%');
+
+  const fbText=isCorrect?fb.ok:fb.ng;
+  const isLastQ=(G.qi>=stg().qs.length-1);
+
+  showTalk(fbText,()=>{
+    if(isLastQ){
+      if(!isCorrect && G.lives<=0){gameOver();return;}
+      enemyDefeatEffect(()=>{
+        const s=stg();
+        if(s.type==='midboss'){
+          setOliveImg('victory');
+          showMsg('⚔ DARK KNIGHT SLAIN!',800);
+          setTimeout(()=>{G.lives=Math.min(5,G.lives+1);refreshLives();showOverlay('ov-midboss');},900);
+        } else if(s.type==='finalboss'){
+          setOliveImg('victory');
+          setTimeout(()=>showChestThenClear(),800);
+        } else {
+          setOliveImg('victory');
+          showMsg('✓ ENEMY DEFEATED!',700);
+          setTimeout(()=>{setOliveImg('idle');nextStage();},2200);
+        }
+      });
+    } else {
+      if(!isCorrect && G.lives<=0){gameOver();return;}
+      G.qi++;renderQ();
+    }
+  });
+}
+
+function popLabel(txt,cls,lp){
+  const arena=document.getElementById('arena');
+  const p=document.createElement('div');p.className='dmg-pop '+cls;p.textContent=txt;
+  p.style.left=lp;p.style.top='32%';arena.appendChild(p);setTimeout(()=>p.remove(),950);
+}
+
+// ── STAGE TRANSITIONS ──
+function nextStage(){
+  G.stage++;G.qi=0;
+  if(G.stage>=STAGES.length){showChestThenClear();return;}
+  const fl=document.getElementById('stage-flash');
+  fl.style.opacity='0.65';
+  setTimeout(()=>{fl.style.opacity='0';swapEnemy();renderQ();},280);
+}
+
+function showMsg(txt,dur){
+  const el=document.getElementById('battle-msg');
+  el.textContent=txt;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),dur+200);
+}
+
+function showOverlay(id){
+  document.querySelectorAll('.overlay').forEach(o=>o.classList.add('hidden'));
+  if(id) document.getElementById(id).classList.remove('hidden');
+}
+
+// ── CHEST APPEARANCE ──
+function showChestThenClear(){
+  document.getElementById('q-panel').style.display='none';
+  document.getElementById('chest-glow').classList.add('show');
+  document.getElementById('chest-wrap').classList.add('appear');
+  setTimeout(()=>gameClear(),2000);
+}
+
+// ── GAME OVER ──
+function gameOver(){
+  setOliveImg('knockdown');
+  document.getElementById('go-score').textContent='Score: '+G.score+' / 20';
+  setTimeout(()=>showOverlay('ov-gameover'),800);
+}
+
+// ── GAME CLEAR ──
+async function gameClear(){
+  document.getElementById('cl-score').textContent='Final Score: '+G.score+' / 20';
+  document.getElementById('lottery-id-display').textContent='ID: '+G.discordId;
+  showOverlay('ov-clear');
+  await issueLotteryNumber();
+}
+
+// ── GAS: ISSUE LOTTERY NUMBER ──
+async function issueLotteryNumber(){
+  const statusEl=document.getElementById('lottery-status');
+  const numEl=document.getElementById('lottery-number-display');
+  statusEl.textContent='Issuing number...';
+  try{
+    const url=GAS_URL+'?action=issue'+'&secret='+encodeURIComponent(API_SECRET)+'&discordId='+encodeURIComponent(G.discordId)+'&score='+encodeURIComponent(G.score+'/20');
+    const res=await fetch(url);
+    if(!res.ok) throw {code:'http_error',message:'HTTP '+res.status};
+    let data;
+    try{data=await res.json();}catch(e){throw {code:'json_error',message:'Failed to parse response'};}
+    if(data.status!=='ok') throw {code:data.code||'gas_error',message:data.message||'GAS error'};
+    if(!data.number||!/^\d{6}$/.test(data.number)) throw {code:'invalid_number',message:'Not a 6-digit number'};
+    numEl.textContent=data.number;
+    statusEl.textContent=data.reissued?'Your number has been restored':'Number issued ✓';
+  }catch(e){
+    if(!IS_PRODUCTION){
+      const fallback=Array.from({length:6},()=>Math.floor(Math.random()*10)).join('');
+      numEl.textContent=fallback;
+      statusEl.textContent='※ TEST mode: Test number issued';
+    } else {
+      const code=e.code||'unknown';const msg=e.message||'Unknown error';
+      let userMsg;
+      if(code==='http_error') userMsg='Connection failed. ('+msg+')';
+      else if(code==='json_error') userMsg='Server response error.';
+      else if(code==='no_numbers_available') userMsg='No numbers available. Contact the organizer.';
+      else if(code==='lock_timeout') userMsg='High traffic. Please try again.';
+      else userMsg='Failed ('+code+'): '+msg;
+      statusEl.textContent=userMsg;
+      numEl.textContent='ERROR';
+    }
+  }
+}
+
+// ── VALIDATION ──
+function validateDiscordId(val){
+  const n=val.trim().replace(/^@/,'').replace(/#\d+$/,'');
+  if(n.length<2) return {ok:false,msg:'Discord ID must be at least 2 characters.'};
+  if(n.length>32) return {ok:false,msg:'Discord ID must be 32 characters or less.'};
+  if(!/^[\w.]+$/.test(n)) return {ok:false,msg:'Discord ID can only contain letters, numbers, _ and .'};
+  return {ok:true,normalized:n};
+}
+
+// ── BUTTONS ──
+document.getElementById('btn-start').onclick=()=>{
+  const input=document.getElementById('discord-id-input');
+  const errEl=document.getElementById('input-error');
+  const result=validateDiscordId(input.value);
+  if(!result.ok){
+    input.classList.add('error');errEl.textContent=result.msg;
+    setTimeout(()=>input.classList.remove('error'),400);return;
+  }
+  errEl.textContent='';
+  G.discordId=result.normalized;
+  document.getElementById('olive-id-label').textContent=result.normalized;
+  startGame();
+};
+document.getElementById('discord-id-input').addEventListener('keydown',e=>{if(e.key==='Enter') document.getElementById('btn-start').click();});
+document.getElementById('btn-retry').onclick=()=>{
+  G={lives:5,stage:0,qi:0,score:0,discordId:G.discordId,waitingNext:false};
+  document.getElementById('olive-id-label').textContent=G.discordId||'OLIVE';
+  refreshLives();swapEnemy();setOliveImg('idle');
+  document.getElementById('q-panel').style.display='';
+  document.getElementById('chest-wrap').classList.remove('appear');
+  document.getElementById('chest-glow').classList.remove('show');
+  renderQ();showOverlay(null);
+};
+document.getElementById('btn-continue').onclick=()=>{showOverlay(null);setOliveImg('idle');nextStage();};
+
+function startGame(){
+  G={lives:5,stage:0,qi:0,score:0,discordId:G.discordId,waitingNext:false};
+  refreshLives();swapEnemy();setOliveImg('idle');
+  document.getElementById('q-panel').style.display='';
+  document.getElementById('chest-wrap').classList.remove('appear');
+  document.getElementById('chest-glow').classList.remove('show');
+  renderQ();showOverlay(null);
+}
+
+// ── INIT ──
+buildDots();
+showOverlay('ov-start');
+</script>
+</body>
+</html>
