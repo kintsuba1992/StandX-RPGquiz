@@ -740,7 +740,7 @@ function startGame(){
   document.getElementById('chest-glow').classList.remove('show');
   renderQ();showOverlay(null);
 }
-
+if(new URLSearchParams(location.search).get('reset')==='true'){localStorage.removeItem(STORAGE_KEY);}
 // ── INIT ──
 buildDots();
 showOverlay('ov-start');
