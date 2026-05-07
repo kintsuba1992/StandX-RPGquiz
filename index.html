@@ -254,6 +254,15 @@ body{background:#000;color:#e8dcc0;font-family:'Crimson Text',serif;overflow:hid
   <div id="battle-msg"></div>
   <div id="stage-flash"></div>
 
+  <!-- GAME OVER PANEL -->
+  <div id="gameover-panel">
+    <div class="go-title">💀 DEFEATED</div>
+    <div class="go-sub">Your quest ends here...</div>
+    <div id="go-score" style="font-size:18px;color:var(--gold);margin:8px 0"></div>
+    <button class="ov-btn" id="btn-retry" style="margin-top:10px">RETRY ?</button>
+    <div class="go-exit">To exit, please close this window.</div>
+  </div>
+
   <!-- Talk window -->
   <div id="talk-wrap">
     <div id="talk-text"></div>
@@ -279,12 +288,7 @@ body{background:#000;color:#e8dcc0;font-family:'Crimson Text',serif;overflow:hid
   <button class="ov-btn" id="btn-start">BEGIN QUEST</button>
 </div>
 
-<div class="overlay hidden" id="ov-gameover">
-  <div class="ov-title" style="color:#e74c3c">💀 DEFEATED</div>
-  <div class="ov-sub">Your quest ends here...</div>
-  <div id="go-score" style="font-size:18px;color:var(--gold);margin-top:6px"></div>
-  <button class="ov-btn" id="btn-retry">RETRY ?</button>
-</div>
+<div class="overlay hidden" id="ov-gameover" style="display:none!important"></div>
 
 <div class="overlay hidden" id="ov-midboss">
   <div class="ov-title" style="color:#ff9900">🔥 MID BOSS SLAIN!</div>
@@ -316,6 +320,34 @@ body{background:#000;color:#e8dcc0;font-family:'Crimson Text',serif;overflow:hid
   letter-spacing:3px;cursor:pointer;transition:all .2s;
 }
 .ov-btn:hover{background:var(--gold);color:#000;}
+
+/* GAME OVER PANEL */
+#gameover-panel{
+  display:none;
+  position:absolute;
+  left:50%;top:50%;transform:translate(-50%,-50%);
+  background:rgba(8,4,18,0.97);
+  border:2px solid #e74c3c;
+  border-radius:10px;
+  padding:28px 36px;
+  z-index:80;
+  text-align:center;
+  min-width:280px;
+  box-shadow:0 0 32px rgba(231,76,60,0.4);
+}
+#gameover-panel .go-title{
+  font-family:'Cinzel',serif;font-size:28px;font-weight:900;
+  color:#e74c3c;letter-spacing:3px;text-shadow:0 0 18px #e74c3c;
+  margin-bottom:8px;
+}
+#gameover-panel .go-sub{
+  font-family:'Crimson Text',serif;font-size:14px;color:#a09070;
+  margin-bottom:6px;
+}
+#gameover-panel .go-exit{
+  font-family:'Crimson Text',serif;font-size:12px;color:#6B7280;
+  margin-top:8px;
+}
 </style>
 
 <script>
@@ -574,7 +606,6 @@ function pick(chosen,correct,fb){
     document.querySelectorAll('.cbtn')[chosen].classList.add('wrong');
     G.lives--;refreshLives();
     setOliveImg('damage');
-    setTimeout(()=>setOliveImg('idle'),2000);
   } else {
     G.score++;
     // enemy HP drain
@@ -589,20 +620,22 @@ function pick(chosen,correct,fb){
   const fbText=isCorrect?fb.ok:fb.ng;
   const isLastQ=(G.qi>=stg().qs.length-1);
 
+  // Set pose immediately with talk window
+  if(isCorrect && isLastQ) setOliveImg('victory');
+
   showTalk(fbText,()=>{
+    // Restore idle on non-last-Q or after NEXT on damage
+    if(!isCorrect) setOliveImg('idle');
     if(isLastQ){
       if(!isCorrect && G.lives<=0){gameOver();return;}
       enemyDefeatEffect(()=>{
         const s=stg();
         if(s.type==='midboss'){
-          setOliveImg('victory');
           showMsg('⚔ DARK KNIGHT SLAIN!',800);
           setTimeout(()=>{G.lives=Math.min(5,G.lives+1);refreshLives();showOverlay('ov-midboss');},900);
         } else if(s.type==='finalboss'){
-          setOliveImg('victory');
           setTimeout(()=>showChestThenClear(),800);
         } else {
-          setOliveImg('victory');
           showMsg('✓ ENEMY DEFEATED!',700);
           setTimeout(()=>{setOliveImg('idle');nextStage();},2200);
         }
@@ -652,7 +685,10 @@ function showChestThenClear(){
 function gameOver(){
   setOliveImg('knockdown');
   document.getElementById('go-score').textContent='Score: '+G.score+' / 20';
-  setTimeout(()=>showOverlay('ov-gameover'),800);
+  // Show panel inside arena (no overlay - so knockdown is visible)
+  setTimeout(()=>{
+    document.getElementById('gameover-panel').style.display='block';
+  },600);
 }
 
 // ── GAME CLEAR ──
@@ -707,21 +743,52 @@ function validateDiscordId(val){
 }
 
 // ── BUTTONS ──
-document.getElementById('btn-start').onclick=()=>{
+document.getElementById('btn-start').onclick=async()=>{
   const input=document.getElementById('discord-id-input');
   const errEl=document.getElementById('input-error');
+  const btn=document.getElementById('btn-start');
   const result=validateDiscordId(input.value);
   if(!result.ok){
     input.classList.add('error');errEl.textContent=result.msg;
     setTimeout(()=>input.classList.remove('error'),400);return;
   }
   errEl.textContent='';
+  btn.disabled=true;btn.textContent='CHECKING...';
+  try{
+    const url=GAS_URL+'?action=checkDiscordId&secret='+encodeURIComponent(API_SECRET)+'&discordId='+encodeURIComponent(result.normalized);
+    const res=await fetch(url);
+    if(!res.ok) throw {code:'http_error',message:'HTTP '+res.status};
+    const data=await res.json();
+    if(data.status!=='ok'){
+      errEl.textContent='Error: '+(data.message||data.code);
+      btn.disabled=false;btn.textContent='BEGIN QUEST';
+      return;
+    }
+    if(data.state==='cleared'){
+      // Already cleared — show lottery number screen
+      btn.disabled=false;btn.textContent='BEGIN QUEST';
+      G.discordId=result.normalized;
+      document.getElementById('lottery-id-display').textContent='ID: '+result.normalized;
+      document.getElementById('lottery-number-display').textContent=data.number;
+      document.getElementById('lottery-status').textContent='Your number has already been issued.';
+      document.getElementById('cl-score').textContent='';
+      showOverlay('ov-clear');
+      return;
+    }
+    // state === 'new' or 'in_progress' → start game
+  }catch(e){
+    errEl.textContent='Connection failed ('+(e.code||e.message||'unknown')+').';
+    btn.disabled=false;btn.textContent='BEGIN QUEST';
+    return;
+  }
+  btn.disabled=false;btn.textContent='BEGIN QUEST';
   G.discordId=result.normalized;
   document.getElementById('olive-id-label').textContent=result.normalized;
   startGame();
 };
 document.getElementById('discord-id-input').addEventListener('keydown',e=>{if(e.key==='Enter') document.getElementById('btn-start').click();});
 document.getElementById('btn-retry').onclick=()=>{
+  document.getElementById('gameover-panel').style.display='none';
   G={lives:5,stage:0,qi:0,score:0,discordId:G.discordId,waitingNext:false};
   document.getElementById('olive-id-label').textContent=G.discordId||'OLIVE';
   refreshLives();swapEnemy();setOliveImg('idle');
@@ -740,7 +807,7 @@ function startGame(){
   document.getElementById('chest-glow').classList.remove('show');
   renderQ();showOverlay(null);
 }
-if(new URLSearchParams(location.search).get('reset')==='true'){localStorage.removeItem(STORAGE_KEY);}
+
 // ── INIT ──
 buildDots();
 showOverlay('ov-start');
