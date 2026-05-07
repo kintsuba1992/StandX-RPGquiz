@@ -844,10 +844,10 @@ function pick(chosen,correct,fb){
         } else if(s.type==='finalboss'){
           setTimeout(()=>showChestThenClear(),800);
         } else {
-          showMsg('✓ ENEMY DEFEATED!',700);
+          showMsg(allCorrect?'✓ ENEMY DEFEATED!':'👻 ENEMY FLED',700);
           setTimeout(()=>{setOliveImg('idle');nextStage();},2200);
         }
-      });
+      }, allCorrect);
     } else {
       if(!isCorrect && G.lives<=0){gameOver();return;}
       G.qi++;renderQ();
