@@ -827,6 +827,7 @@ function showTalk(text,onNext,isCorrect){
   if(isCorrect===false) textEl.classList.add('incorrect');
   // Reset font size before showing
   textEl.style.fontSize='';
+  wrap.style.display='';
   wrap.classList.add('show');
   G.waitingNext=true;
   // Auto shrink font on portrait mobile only
@@ -844,7 +845,7 @@ function showTalk(text,onNext,isCorrect){
     });
   }
   const btn=document.getElementById('talk-next');
-  btn.onclick=()=>{wrap.classList.remove('show');G.waitingNext=false;if(onNext)onNext();};
+  btn.onclick=()=>{wrap.classList.remove('show');wrap.style.display='none';G.waitingNext=false;if(onNext)onNext();};
 }
 
 // ── RENDER Q ──
