@@ -438,10 +438,9 @@ body{background:#000;color:#e8dcc0;font-family:'Crimson Text',serif;overflow:hid
     border-left:none;border-right:none;border-top:none;
     padding:8px 12px 6px;
     overflow:hidden;
-    display:flex;
     flex-direction:column;
   }
-  #talk-wrap.show{display:flex;}
+  #talk-wrap.show{display:flex!important;}
   #talk-text{font-size:11px;line-height:1.4;flex:1;overflow-y:auto;min-height:0;}
   #talk-next{font-size:10px;padding:6px 16px;margin-top:6px;flex-shrink:0;width:auto;align-self:flex-end;}
 }
@@ -1074,6 +1073,8 @@ document.getElementById('start-quest-btn').onclick=async()=>{
 document.getElementById('discord-id-input').addEventListener('keydown',e=>{if(e.key==='Enter') document.getElementById('start-quest-btn').click();});
 document.getElementById('btn-retry').onclick=()=>{
   document.getElementById('gameover-panel').style.display='none';
+  const tw=document.getElementById('talk-wrap');
+  tw.classList.remove('show');tw.style.display='none';
   G={lives:5,stage:0,qi:0,score:0,discordId:G.discordId,waitingNext:false,stageCorrect:0};
   document.getElementById('olive-id-label').textContent=G.discordId||'OLIVE';
   refreshLives();swapEnemy();setOliveImg('idle');
@@ -1082,7 +1083,11 @@ document.getElementById('btn-retry').onclick=()=>{
   document.getElementById('chest-glow').classList.remove('show');
   renderQ();showOverlay(null);
 };
-document.getElementById('btn-continue').onclick=()=>{showOverlay(null);setOliveImg('idle');nextStage();};
+document.getElementById('btn-continue').onclick=()=>{
+  const tw=document.getElementById('talk-wrap');
+  tw.classList.remove('show');tw.style.display='none';
+  showOverlay(null);setOliveImg('idle');nextStage();
+};
 
 function startGame(){
   G={lives:5,stage:0,qi:0,score:0,discordId:G.discordId,waitingNext:false,stageCorrect:0};
@@ -1091,6 +1096,9 @@ function startGame(){
   document.getElementById('chest-wrap').classList.remove('appear');
   document.getElementById('chest-glow').classList.remove('show');
   document.getElementById('ov-start').style.display='none';
+  const tw=document.getElementById('talk-wrap');
+  tw.classList.remove('show');tw.style.display='none';
+  document.getElementById('gameover-panel').style.display='none';
   renderQ();showOverlay(null);
 }
 
