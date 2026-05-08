@@ -433,14 +433,17 @@ body{background:#000;color:#e8dcc0;font-family:'Crimson Text',serif;overflow:hid
     left:0;top:0;
     transform:none;
     width:100%;max-width:none;min-width:0;
-    max-height:40%;
+    max-height:44%;
     border-radius:0 0 6px 6px;
     border-left:none;border-right:none;border-top:none;
     padding:8px 12px 6px;
-    overflow-y:auto;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
   }
-  #talk-text{font-size:11px;line-height:1.4;}
-  #talk-next{font-size:10px;padding:5px 16px;margin-top:6px;}
+  #talk-wrap.show{display:flex;}
+  #talk-text{font-size:11px;line-height:1.4;flex:1;overflow-y:auto;min-height:0;}
+  #talk-next{font-size:10px;padding:6px 16px;margin-top:6px;flex-shrink:0;width:auto;align-self:flex-end;}
 }
 #gameover-panel .go-title{
   font-family:'Cinzel',serif;font-size:22px;font-weight:900;
@@ -822,8 +825,24 @@ function showTalk(text,onNext,isCorrect){
   textEl.classList.remove('correct','incorrect');
   if(isCorrect===true)  textEl.classList.add('correct');
   if(isCorrect===false) textEl.classList.add('incorrect');
+  // Reset font size before showing
+  textEl.style.fontSize='';
   wrap.classList.add('show');
   G.waitingNext=true;
+  // Auto shrink font on portrait mobile only
+  const isPortrait=window.matchMedia('(orientation:portrait) and (max-width:600px)').matches;
+  if(isPortrait){
+    requestAnimationFrame(()=>{
+      let size=11;
+      const minSize=8;
+      while(size>=minSize){
+        textEl.style.fontSize=size+'px';
+        // Check if text overflows the wrap (accounting for NEXT button)
+        if(textEl.scrollHeight<=textEl.clientHeight) break;
+        size--;
+      }
+    });
+  }
   const btn=document.getElementById('talk-next');
   btn.onclick=()=>{wrap.classList.remove('show');G.waitingNext=false;if(onNext)onNext();};
 }
