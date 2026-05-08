@@ -426,11 +426,11 @@ body{background:#000;color:#e8dcc0;font-family:'Crimson Text',serif;overflow:hid
 }
 @media screen and (orientation:portrait) and (max-width:600px){
   #gameover-panel{
-    left:4%;top:2px;
+    left:0;top:0;
     transform:none;
-    width:92%;max-width:none;
+    width:100%;max-width:none;
     border-radius:0 0 8px 8px;
-    padding:12px 16px;
+    padding:10px 16px;
   }
   #gameover-panel .go-title{font-size:18px;margin-bottom:4px;}
   #gameover-panel .go-sub{font-size:12px;margin-bottom:4px;}
@@ -782,45 +782,56 @@ function spawnSparks(targetEl){
 }
 
 // ── FINALBOSS DEFEAT EFFECT ──
-function finalBossDefeatEffect(cb){
+function finalBossDefeatEffect(cb, allCorrect){
   const arena=document.getElementById('arena');
   const el=document.getElementById('finalboss-img');
-  const rect=el.getBoundingClientRect();
-  const ar=arena.getBoundingClientRect();
-  const cx=rect.left-ar.left+rect.width/2;
-  const cy=rect.top-ar.top+rect.height/2;
-  // Large particle burst (3 waves)
-  const colors=['#ff4444','#ff9900','#ffdd00','#ffffff','#ff6600','#c084fc','#ff0066'];
-  for(let wave=0;wave<3;wave++){
+  if(allCorrect){
+    // Defeated — large particle burst + flash
+    const rect=el.getBoundingClientRect();
+    const ar=arena.getBoundingClientRect();
+    const cx=rect.left-ar.left+rect.width/2;
+    const cy=rect.top-ar.top+rect.height/2;
+    const colors=['#ff4444','#ff9900','#ffdd00','#ffffff','#ff6600','#c084fc','#ff0066'];
+    for(let wave=0;wave<3;wave++){
+      setTimeout(()=>{
+        for(let i=0;i<36;i++){
+          const p=document.createElement('div');
+          p.className='particle';
+          const angle=Math.random()*Math.PI*2;
+          const dist=80+Math.random()*140;
+          const size=5+Math.random()*10;
+          p.style.cssText='left:'+cx+'px;top:'+cy+'px;width:'+size+'px;height:'+size+'px;'
+            +'background:'+colors[Math.floor(Math.random()*colors.length)]+';'
+            +'--dx:'+(Math.cos(angle)*dist)+'px;--dy:'+(Math.sin(angle)*dist)+'px;'
+            +'animation-duration:'+(0.6+Math.random()*0.6)+'s;'
+            +'animation-delay:'+(Math.random()*0.1)+'s;';
+          arena.appendChild(p);
+          setTimeout(()=>p.remove(),1200);
+        }
+      }, wave*200);
+    }
+    el.classList.add('dissolve-anim');
+    const flash=document.getElementById('stage-flash');
+    flash.style.background='#fff';
+    flash.style.opacity='0.3';
+    setTimeout(()=>{ flash.style.opacity='0'; },120);
     setTimeout(()=>{
-      for(let i=0;i<36;i++){
-        const p=document.createElement('div');
-        p.className='particle';
-        const angle=Math.random()*Math.PI*2;
-        const dist=80+Math.random()*140;
-        const size=5+Math.random()*10;
-        p.style.cssText='left:'+cx+'px;top:'+cy+'px;width:'+size+'px;height:'+size+'px;'
-          +'background:'+colors[Math.floor(Math.random()*colors.length)]+';'
-          +'--dx:'+(Math.cos(angle)*dist)+'px;--dy:'+(Math.sin(angle)*dist)+'px;'
-          +'animation-duration:'+(0.6+Math.random()*0.6)+'s;'
-          +'animation-delay:'+(Math.random()*0.1)+'s;';
-        arena.appendChild(p);
-        setTimeout(()=>p.remove(),1200);
-      }
-    }, wave*200);
+      el.classList.remove('dissolve-anim');
+      el.style.display='none';
+      if(cb) cb();
+    }, 1100);
+  } else {
+    // Fled — fade out only
+    playSound('defeat_fade');
+    el.style.transition='opacity 1.2s ease';
+    el.style.opacity='0';
+    setTimeout(()=>{
+      el.style.transition='';
+      el.style.opacity='';
+      el.style.display='none';
+      if(cb) cb();
+    }, 1300);
   }
-  // Dissolve enemy
-  el.classList.add('dissolve-anim');
-  // Subtle flash (opacity 0.3, quick)
-  const flash=document.getElementById('stage-flash');
-  flash.style.background='#fff';
-  flash.style.opacity='0.3';
-  setTimeout(()=>{ flash.style.opacity='0'; },120);
-  setTimeout(()=>{
-    el.classList.remove('dissolve-anim');
-    el.style.display='none';
-    if(cb) cb();
-  }, 1100);
 }
 
 // ── ENEMY SWAP ──
@@ -973,16 +984,21 @@ function pick(chosen,correct,fb){
       const allCorrect=(G.stageCorrect>=stg().qs.length);
       const s_cur=stg();
       if(s_cur.type==='finalboss'){
-        setOliveImg('victory');
+        if(allCorrect) setOliveImg('victory');
         finalBossDefeatEffect(()=>{
           setTimeout(()=>showChestThenClear(),800);
-        });
+        }, allCorrect);
       } else {
         enemyDefeatEffect(()=>{
           const s=stg();
           if(s.type==='midboss'){
-            showMsg('⚔ DARK KNIGHT SLAIN!',800);
-            setTimeout(()=>{G.lives=Math.min(5,G.lives+1);refreshLives();showOverlay('ov-midboss');},900);
+            if(allCorrect){
+              showMsg('⚔ DARK KNIGHT SLAIN!',800);
+              setTimeout(()=>{G.lives=Math.min(5,G.lives+1);refreshLives();showOverlay('ov-midboss');},900);
+            } else {
+              showMsg('⚠ DARK KNIGHT ESCAPED',700);
+              setTimeout(()=>{setOliveImg('idle');nextStage();},2200);
+            }
           } else {
             showMsg(allCorrect?'✓ ENEMY DEFEATED!':'👻 ENEMY FLED',700);
             setTimeout(()=>{setOliveImg('idle');nextStage();},2200);
@@ -1045,7 +1061,8 @@ function gameOver(){
   document.getElementById('go-score').textContent='Score: '+G.score+' / 20';
   // Show panel inside arena (no overlay - so knockdown is visible)
   setTimeout(()=>{
-    document.getElementById('gameover-panel').style.display='block';
+    const gop=document.getElementById('gameover-panel');
+    gop.style.display='block';
   },600);
 }
 
